@@ -1,47 +1,45 @@
-const express = require('express');
-const cookieParser = require('cookie-parser');
-const logger = require('morgan');
-const fs = require('fs');
-const pubsub = require(__dirname + '/config/pubsub');
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import logger from 'morgan';
+import fs from 'fs';
 
 const app = express();
 
 app.use(logger('dev'));
 app.use(express.json());
-app.use(express.urlencoded({extended: false}));
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 
 // Dynamic routing
-fs.readdirSync(__dirname + '/app/routes').forEach((file) => {
-  app.use('/', require(__dirname + '/app/routes/' + file));
-});
+const routeFiles = fs.readdirSync(new URL('./app/routes', import.meta.url).pathname);
+for (const file of routeFiles) {
+  const route = await import(new URL(`./app/routes/${file}`, import.meta.url).pathname);
+  app.use('/', route.default);
+}
 
 // Pubsub topic init
-fs.readdirSync(__dirname + '/app/events').forEach((file) => {
-  const event = require(__dirname + '/app/events/' + file);
-
-  pubsub.createTopic(event.getTopicName()).catch((err) => {
+const eventFiles = fs.readdirSync(new URL('./app/events', import.meta.url).pathname);
+for (const file of eventFiles) {
+  const event = await import(new URL(`./app/events/${file}`, import.meta.url).pathname);
+  createTopic(event.getTopicName()).catch((err) => {
     console.error('ERROR:', err.details);
   });
-});
+}
 
 // Pubsub subscription init
-fs.readdirSync(__dirname + '/app/subscribers').forEach((file) => {
-  const subs = require(__dirname + '/app/subscribers/' + file);
-
-  pubsub.createTopic(subs.getTopicName()).catch((err) => {
+const subscriberFiles = fs.readdirSync(new URL('./app/subscribers', import.meta.url).pathname);
+for (const file of subscriberFiles) {
+  const subs = await import(new URL(`./app/subscribers/${file}`, import.meta.url).pathname);
+  createTopic(subs.getTopicName()).catch((err) => {
     console.error('ERROR:', err.details);
   });
 
-  pubsub
-      .topic(subs.getTopicName())
-      .createSubscription(subs.getSubsName())
-      .catch((err) => {
-        console.error('ERROR:', err.details);
-      });
+  topic(subs.getTopicName()).createSubscription(subs.getSubsName()).catch((err) => {
+    console.error('ERROR:', err.details);
+  });
 
-  pubsub.subscription(subs.getSubsName()).on('message', subs.handler);
-});
+  subscription(subs.getSubsName()).on('message', subs.handler);
+}
 
 // Default error handler
 app.use((err, req, res, next) => {
@@ -57,4 +55,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-module.exports = app;
+export default app;
