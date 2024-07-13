@@ -20,6 +20,7 @@
     "chai-http": "^4.3.0",
     "eslint": "^6.8.0",
     "eslint-config-google": "^0.14.0",
-    "mocha": "^10.6.0"
+    "mocha": "^10.6.0",
+    "prisma": "^5.16.2"
   }
 }
