@@ -17,30 +17,6 @@ for (const file of routeFiles) {
   app.use('/', route.default);
 }
 
-// Pubsub topic init
-const eventFiles = fs.readdirSync(new URL('./app/events', import.meta.url).pathname);
-for (const file of eventFiles) {
-  const event = await import(new URL(`./app/events/${file}`, import.meta.url).pathname);
-  createTopic(event.getTopicName()).catch((err) => {
-    console.error('ERROR:', err.details);
-  });
-}
-
-// Pubsub subscription init
-const subscriberFiles = fs.readdirSync(new URL('./app/subscribers', import.meta.url).pathname);
-for (const file of subscriberFiles) {
-  const subs = await import(new URL(`./app/subscribers/${file}`, import.meta.url).pathname);
-  createTopic(subs.getTopicName()).catch((err) => {
-    console.error('ERROR:', err.details);
-  });
-
-  topic(subs.getTopicName()).createSubscription(subs.getSubsName()).catch((err) => {
-    console.error('ERROR:', err.details);
-  });
-
-  subscription(subs.getSubsName()).on('message', subs.handler);
-}
-
 // Default error handler
 app.use((err, req, res, next) => {
   if (typeof err.handle === 'function') {
